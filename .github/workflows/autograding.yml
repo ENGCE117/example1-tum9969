@@ -36,10 +36,12 @@ jobs:
               # Compare Test Case
               if [ -f testcases/output${i}.dat ]; then
                 if grep -Fq "$(cat testcases/output${i}.dat)" output${i}.txt; then
-                  echo "Test Case ${i} Passed"
+                  # Print passed test case in green
+                  echo -e "\033[0;32mTest Case ${i} Passed\033[0m"
                   passed_testcases=$((passed_testcases+1))
                 else
-                  echo "Test Case ${i} Failed"
+                  # Print failed test case in red
+                  echo -e "\033[0;31mTest Case ${i} Failed\033[0m"
                 fi
               else
                 echo "Test Case ${i} skipped (no output file found)."
