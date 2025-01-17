@@ -1,0 +1,108 @@
+name: Reusable Autograding Workflow
+
+on:
+  workflow_call:
+    inputs:
+      max_test_cases:
+        description: "Maximum number of test cases"
+        required: true
+        type: number
+    secrets:
+      WEBSITE_URL:
+        description: "URL to send results"
+        required: true
+
+jobs:
+  autograding:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up C Compiler
+      - name: Set up C Compiler
+        run: sudo apt-get install build-essential
+
+      # Step 3: Compile student code
+      - name: Compile student code
+        run: gcc -o student_program student_program.c
+
+      # Step 4: Run and Compare Test Cases
+      - name: Run and Compare Test Cases
+        run: |
+          total_testcases=0
+          passed_testcases=0
+
+           # Display maximum test case limit
+          echo "Max test cases allowed: ${{ inputs.max_test_cases }}"
+
+          for i in $(seq 1 ${{ inputs.max_test_cases }}); do
+            if [ -f testcases/input${i}.dat ]; then
+              total_testcases=$((total_testcases+1))
+              ./student_program < testcases/input${i}.dat > output${i}.txt
+
+              if [ -f testcases/output${i}.dat ]; then
+                if cmp -s output${i}.txt testcases/output${i}.dat; then
+                  echo "Test Case ${i} Passed"
+                  passed_testcases=$((passed_testcases+1))
+                else
+                  echo "Test Case ${i} Failed"
+                  echo "Expected:"
+                  cat testcases/output${i}.dat
+                  echo "Got:"
+                  cat output${i}.txt
+                  echo "Difference:"
+                  diff --color=always testcases/output${i}.dat output${i}.txt || true
+                fi
+              else
+                echo "Test Case ${i} skipped (no output file found)."
+              fi
+            else
+              echo "Test Case ${i} skipped (no input file found)."
+            fi
+          done
+
+          if [ $total_testcases -gt 0 ]; then
+            score=$(( (passed_testcases * 100) / total_testcases ))
+          else
+            score=0
+          fi
+
+          echo "Total Test Cases: $total_testcases"
+          echo "Passed Test Cases: $passed_testcases"
+          echo "Score Percentage: $score%"
+          echo "SCORE=$score" >> $GITHUB_ENV
+
+      # Step 5: Extract student info
+      - name: Extract student info
+        id: student_info
+        run: |
+          source student_info.txt
+          echo "STUDENT_ID=${student_id}" >> $GITHUB_ENV
+          echo "SUBJECT_ID=${subject_id}" >> $GITHUB_ENV
+          echo "TERM=${term}" >> $GITHUB_ENV
+
+      # Step 6: Extract lab_id from github_repo
+      - name: Extract lab_id from github_repo
+        id: extract_lab_id
+        run: |
+          LAB_ID=$(echo "${{ github.repository }}" | awk -F'/' '{print $2}' | awk -F'-' '{print $1}')
+          echo "LAB_ID=$LAB_ID" >> $GITHUB_ENV
+
+      # Step 7: Send results to the website
+      - name: Records results
+        run: |
+          TIMESTAMP=$(TZ='Asia/Bangkok' date +"%Y-%m-%dT%H:%M:%S%z")
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+            "student_id": "${{ env.STUDENT_ID }}",
+            "subject_id": "${{ env.SUBJECT_ID }}",
+            "term": "${{ env.TERM }}",
+            "lab_id": "${{ env.LAB_ID }}",
+            "github_username": "${{ github.actor }}",
+            "github_repo": "${{ github.repository }}",
+            "timestamp": "'"$TIMESTAMP"'",
+            "score": "${{ env.SCORE }}"
+          }' \
+          ${{ secrets.WEBSITE_URL }}
