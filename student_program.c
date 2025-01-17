@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 int main() {
-    //YOUR CODE HERE
+    int a = 0 ;
+    scanf( "%d", &a ) ;
+    for( int i = 0 ; i < a ; i++ ) printf( "%d ", i ) ;
     return 0 ;
 }//end function
