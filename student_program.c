@@ -1,12 +1,12 @@
 #include <stdio.h>
 
 int main() {
-    int a = 0 ;
-    scanf( "%d", &a ) ;
-    if( a % 2 == 0 ) 
-        for( int i = 1 ; i <= a ; i++ ) printf( "%d ", i * 2 )  ;
-    else 
-        for( int i = 9 ; i >= 1 ; i -= 2 ) printf( "%d ", i )  ;
-    
+    int a = 0, b = 0, answer = 0 ;
+    printf( "Enter Number : " ) ;
+    scanf( "%d %d", &a, &b ) ;
+    if( a == 0 && b == 0 ) answer = 0 ;
+    else if( a == 1 && b == 1 ) answer = 1 ;
+    else answer = a + b ;
+    printf( "Answer = %d", answer ) ;
     return 0 ;
-}//end function
+}
